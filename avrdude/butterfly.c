@@ -17,7 +17,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* $Id$ */
+/* $Id: butterfly.c 1107 2012-11-20 14:03:50Z joerg_wunsch $ */
 
 /*
  * avrdude interface for the serial programming mode of the Atmel butterfly
@@ -57,6 +57,7 @@ struct pdata
 {
   char has_auto_incr_addr;
   unsigned int buffersize;
+  unsigned int addr;
 };
 
 #define PDATA(pgm) ((struct pdata *)(pgm->cookie))
@@ -119,8 +120,14 @@ static void butterfly_vfy_cmd_sent(PROGRAMMER * pgm, char * errmsg)
 
 static int butterfly_rdy_led(PROGRAMMER * pgm, int value)
 {
-  /* Do nothing. */
-
+  if (value == ON) {
+    butterfly_send(pgm, "xx", 2);
+    butterfly_vfy_cmd_sent(pgm, "set LED");
+  }
+  else {
+    butterfly_send(pgm, "yy", 2);
+    butterfly_vfy_cmd_sent(pgm, "clear LED");
+  }
   return 0;
 }
 
@@ -156,7 +163,7 @@ static int butterfly_chip_erase(PROGRAMMER * pgm, AVRPART * p)
 {
   butterfly_send(pgm, "e", 1);
   butterfly_vfy_cmd_sent(pgm, "chip erase");
-
+  PDATA(pgm)->addr = 0;
   return 0;
 }
 
@@ -326,6 +333,7 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
   fprintf(stderr,
     "Programmer supports buffered memory access with buffersize=%i bytes.\n",
      PDATA(pgm)->buffersize);
+  PDATA(pgm)->addr = 0;
 
   /* Get list of devices that the programmer supports. */
 
@@ -362,7 +370,6 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 	    "%s: devcode selected: 0x%02x\n",
 	    progname, (unsigned)buf[1]);
 
-  butterfly_enter_prog_mode(pgm);
   butterfly_drain(pgm, 0);
 
   return 0;
@@ -373,13 +380,13 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 static void butterfly_disable(PROGRAMMER * pgm)
 {
   butterfly_leave_prog_mode(pgm);
-
   return;
 }
 
 
 static void butterfly_enable(PROGRAMMER * pgm)
 {
+  butterfly_enter_prog_mode(pgm);
   return;
 }
 
@@ -423,7 +430,7 @@ static void butterfly_display(PROGRAMMER * pgm, const char * p)
 }
 
 
-static void butterfly_set_addr(PROGRAMMER * pgm, unsigned long addr)
+static void butterfly_set_addr(PROGRAMMER * pgm, unsigned int addr)
 {
   char cmd[3];
 
@@ -449,7 +456,12 @@ static void butterfly_set_extaddr(PROGRAMMER * pgm, unsigned long addr)
   butterfly_vfy_cmd_sent(pgm, "set extaddr");
 }
 
-
+static int butterfly_redress(PROGRAMMER * pgm, unsigned int addr, unsigned int inc)
+{
+  int redress = (PDATA(pgm)->has_auto_incr_addr == 'Y') && (PDATA(pgm)->addr != addr);
+  PDATA(pgm)->addr = addr + inc;
+  return redress;  
+}
 
 static int butterfly_write_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                              unsigned long addr, unsigned char value)
@@ -472,10 +484,12 @@ static int butterfly_write_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
       size = 6;
       return -1;
     }
-    if (use_ext_addr) {
-      butterfly_set_extaddr(pgm, addr);
-    } else {
-      butterfly_set_addr(pgm, addr);
+    if (butterfly_redress(pgm, addr, 1)) {
+	if (use_ext_addr) {
+	  butterfly_set_extaddr(pgm, addr);
+	} else {
+	  butterfly_set_addr(pgm, addr);
+	}
     }
   }
   else if (strcmp(m->desc, "lock") == 0)
@@ -502,33 +516,28 @@ static int butterfly_read_byte_flash(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
   static unsigned long caddr;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
 
-  if (cached && ((caddr + 1) == addr)) {
+  if (cached && (caddr == addr)) {
     *value = cvalue;
     cached = 0;
   }
   else {
     char buf[2];
 
-    if (use_ext_addr) {
-      butterfly_set_extaddr(pgm, addr >> 1);
-    } else {
-      butterfly_set_addr(pgm, addr >> 1);
+    if (butterfly_redress(pgm, addr, 2)) {
+      if (use_ext_addr) {
+	butterfly_set_extaddr(pgm, addr >> 1);
+      } else {
+	butterfly_set_addr(pgm, addr >> 1);
+      }
     }
 
-    butterfly_send(pgm, "g\000\002F", 4);
+    butterfly_send(pgm, "R", 1);	   /* read flash word */
+    butterfly_recv(pgm, buf, sizeof(buf)); /* msb first */
 
-    /* Read back the program mem word (MSB first) */
-    butterfly_recv(pgm, buf, sizeof(buf));
-
-    if ((addr & 0x01) == 0) {
-      *value = buf[1];
-      cached = 1;
-      cvalue = buf[0];
-      caddr = addr;
-    }
-    else {
-      *value = buf[0];
-    }
+    caddr = addr ^ 1;
+    *value = buf[caddr & 1];
+    cvalue = buf[addr & 1];
+    cached = 1;
   }
 
   return 0;
@@ -538,7 +547,8 @@ static int butterfly_read_byte_flash(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
 static int butterfly_read_byte_eeprom(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                    unsigned long addr, unsigned char * value)
 {
-  butterfly_set_addr(pgm, addr);
+  if (butterfly_redress(pgm, addr, 1))
+    butterfly_set_addr(pgm, addr);
   butterfly_send(pgm, "g\000\001E", 4);
   butterfly_recv(pgm, (char *)value, 1);
   return 0;
@@ -580,6 +590,14 @@ static int butterfly_read_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
 }
 
 
+static int butterfly_page_erase(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m, unsigned int addr)
+{
+  if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
+    return -2;
+
+  return m->desc[0] == 'e'? 0 : -1;
+}
+
 
 static int butterfly_paged_write(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                  unsigned int page_size,
@@ -587,20 +605,19 @@ static int butterfly_paged_write(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
 {
   unsigned int max_addr = addr + n_bytes;
   char *cmd;
-  unsigned int blocksize = PDATA(pgm)->buffersize;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
-  unsigned int wr_size = 2;
+  int eeprom = m->desc[0] == 'e';
+  unsigned blocksize = eeprom ? n_bytes : PDATA(pgm)->buffersize;
 
   if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
     return -2;
 
-  if (m->desc[0] == 'e')
-    wr_size = blocksize = 1;		/* Write to eeprom single bytes only */
-
-  if (use_ext_addr) {
-    butterfly_set_extaddr(pgm, addr / wr_size);
-  } else {
-    butterfly_set_addr(pgm, addr / wr_size);
+  if (butterfly_redress(pgm, addr, n_bytes)) {
+    if (use_ext_addr) {
+      butterfly_set_extaddr(pgm, eeprom ? addr : addr >> 1);
+    } else {
+      butterfly_set_addr(pgm, eeprom ? addr : addr >> 1);
+    }
   }
 
 #if 0
@@ -639,27 +656,26 @@ static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                 unsigned int addr, unsigned int n_bytes)
 {
   unsigned int max_addr = addr + n_bytes;
-  int rd_size = 2;
-  int blocksize = PDATA(pgm)->buffersize;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
+  int eeprom = m->desc[0] == 'e';
 
   /* check parameter syntax: only "flash" or "eeprom" is allowed */
   if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
     return -2;
 
-  if (m->desc[0] == 'e')
-    rd_size = blocksize = 1;		/* Read from eeprom single bytes only */
-
   {		/* use buffered mode */
     char cmd[4];
+    int blocksize = eeprom ? n_bytes : PDATA(pgm)->buffersize;
 
     cmd[0] = 'g';
     cmd[3] = toupper((int)(m->desc[0]));
 
-    if (use_ext_addr) {
-      butterfly_set_extaddr(pgm, addr / rd_size);
-    } else {
-      butterfly_set_addr(pgm, addr / rd_size);
+    if (butterfly_redress(pgm, addr, n_bytes)) {
+      if (use_ext_addr) {
+	butterfly_set_extaddr(pgm, eeprom ? addr : addr >> 1);
+      } else {
+	butterfly_set_addr(pgm, eeprom ? addr : addr >> 1);
+      }
     }
     while (addr < max_addr) {
       if ((max_addr - addr) < blocksize) {
@@ -675,7 +691,7 @@ static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
     } /* while */
   }
 
-  return addr * rd_size;
+  return addr;
 }
 
 
@@ -729,6 +745,7 @@ void butterfly_initpgm(PROGRAMMER * pgm)
    * optional functions
    */
 
+  pgm->page_erase = butterfly_page_erase;
   pgm->paged_write = butterfly_paged_write;
   pgm->paged_load = butterfly_paged_load;
 
