@@ -592,10 +592,13 @@ static int butterfly_read_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
 
 static int butterfly_page_erase(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m, unsigned int addr)
 {
-  if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
-    return -2;
+  int flash, eeprom;
 
-  return m->desc[0] == 'e'? 0 : -1;
+  flash = strcmp(m->desc, "flash") == 0;
+  if (flash) return -1;		/* not supported */
+  eeprom = strcmp(m->desc, "eeprom") == 0; 
+  if (eeprom) return 0;
+  return -2;
 }
 
 
@@ -603,22 +606,15 @@ static int butterfly_paged_write(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                  unsigned int page_size,
                                  unsigned int addr, unsigned int n_bytes)
 {
-  unsigned int max_addr = addr + n_bytes;
   char *cmd;
+  int flash, eeprom;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
-  int eeprom = m->desc[0] == 'e';
-  unsigned blocksize = eeprom ? n_bytes : PDATA(pgm)->buffersize;
+  unsigned int blocksize = PDATA(pgm)->buffersize;
 
-  if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
+  flash = strcmp(m->desc, "flash") == 0;
+  eeprom = strcmp(m->desc, "eeprom") == 0; 
+  if (!flash && !eeprom)
     return -2;
-
-  if (butterfly_redress(pgm, addr, n_bytes)) {
-    if (use_ext_addr) {
-      butterfly_set_extaddr(pgm, eeprom ? addr : addr >> 1);
-    } else {
-      butterfly_set_addr(pgm, eeprom ? addr : addr >> 1);
-    }
-  }
 
 #if 0
   usleep(1000000);
@@ -631,10 +627,18 @@ static int butterfly_paged_write(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
   cmd[0] = 'B';
   cmd[3] = toupper((int)(m->desc[0]));
 
-  while (addr < max_addr) {
-    if ((max_addr - addr) < blocksize) {
-      blocksize = max_addr - addr;
-    };
+  while (n_bytes) {
+    if (n_bytes < blocksize)
+      blocksize = n_bytes;
+
+    if (butterfly_redress(pgm, addr, blocksize)) {
+      if (use_ext_addr) {
+	butterfly_set_extaddr(pgm, eeprom ? addr : addr >> 1);
+      } else {
+	butterfly_set_addr(pgm, eeprom ? addr : addr >> 1);
+      }
+    }
+
     memcpy(&cmd[4], &m->buf[addr], blocksize);
     cmd[1] = (blocksize >> 8) & 0xff;
     cmd[2] = blocksize & 0xff;
@@ -643,54 +647,52 @@ static int butterfly_paged_write(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
     butterfly_vfy_cmd_sent(pgm, "write block");
 
     addr += blocksize;
-  } /* while */
+    n_bytes -= blocksize;
+  }
   free(cmd);
 
   return addr;
 }
 
 
-
 static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                 unsigned int page_size,
                                 unsigned int addr, unsigned int n_bytes)
 {
-  unsigned int max_addr = addr + n_bytes;
+  char cmd[4];
+  int flash, eeprom;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
-  int eeprom = m->desc[0] == 'e';
+  unsigned int blocksize = PDATA(pgm)->buffersize;
 
-  /* check parameter syntax: only "flash" or "eeprom" is allowed */
-  if (strcmp(m->desc, "flash") && strcmp(m->desc, "eeprom")) 
+  flash = strcmp(m->desc, "flash") == 0;
+  eeprom = strcmp(m->desc, "eeprom") == 0; 
+  if (!flash && !eeprom)
     return -2;
 
-  {		/* use buffered mode */
-    char cmd[4];
-    int blocksize = eeprom ? n_bytes : PDATA(pgm)->buffersize;
+  cmd[0] = 'g';
+  cmd[3] = toupper((int)(m->desc[0]));
 
-    cmd[0] = 'g';
-    cmd[3] = toupper((int)(m->desc[0]));
+  while (n_bytes) {
+    if (n_bytes < blocksize)
+      blocksize = n_bytes;
 
-    if (butterfly_redress(pgm, addr, n_bytes)) {
+    if (butterfly_redress(pgm, addr, blocksize)) {
       if (use_ext_addr) {
 	butterfly_set_extaddr(pgm, eeprom ? addr : addr >> 1);
       } else {
 	butterfly_set_addr(pgm, eeprom ? addr : addr >> 1);
       }
     }
-    while (addr < max_addr) {
-      if ((max_addr - addr) < blocksize) {
-        blocksize = max_addr - addr;
-      };
-      cmd[1] = (blocksize >> 8) & 0xff;
-      cmd[2] = blocksize & 0xff;
 
-      butterfly_send(pgm, cmd, 4);
-      butterfly_recv(pgm, (char *)&m->buf[addr], blocksize);
+    cmd[1] = (blocksize >> 8) & 0xff;
+    cmd[2] = blocksize & 0xff;
 
-      addr += blocksize;
-    } /* while */
+    butterfly_send(pgm, cmd, 4);
+    butterfly_recv(pgm, (char *)&m->buf[addr], blocksize);
+
+    addr += blocksize;
+    n_bytes -= blocksize;
   }
-
   return addr;
 }
 
