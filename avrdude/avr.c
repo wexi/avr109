@@ -373,8 +373,27 @@ int avr_read(PROGRAMMER * pgm, AVRPART * p, char * memtype,
      */
     int need_read, failure;
     unsigned int pageaddr;
+    unsigned int npages, nread;
 
-    for (pageaddr = 0, failure = 0;
+    /* quickly scan number of pages to be written to first */
+    for (pageaddr = 0, npages = 0;
+         pageaddr < mem->size;
+         pageaddr += mem->page_size) {
+      /* check whether this page must be read */
+      for (i = pageaddr;
+           i < pageaddr + mem->page_size;
+           i++)
+        if (vmem == NULL /* no verify, read everything */ ||
+            (mem->tags[i] & TAG_ALLOCATED) != 0 /* verify, do only
+                                                    read pages that
+                                                    are needed in
+                                                    input file */) {
+          npages++;
+          break;
+        }
+    }
+
+    for (pageaddr = 0, failure = 0, nread = 0;
          !failure && pageaddr < mem->size;
          pageaddr += mem->page_size) {
       /* check whether this page must be read */
@@ -400,7 +419,8 @@ int avr_read(PROGRAMMER * pgm, AVRPART * p, char * memtype,
                 "%s: avr_read(): skipping page %u: no interesting data\n",
                 progname, pageaddr / mem->page_size);
       }
-      report_progress(pageaddr, mem->size, NULL);
+      nread++;
+      report_progress(nread, npages, NULL);
     }
     if (!failure) {
       if (strcasecmp(mem->desc, "flash") == 0 ||
@@ -901,8 +921,23 @@ int avr_write(PROGRAMMER * pgm, AVRPART * p, char * memtype, int size,
      */
     int need_write, failure;
     unsigned int pageaddr;
+    unsigned int npages, nwritten;
 
-    for (pageaddr = 0, failure = 0;
+    /* quickly scan number of pages to be written to first */
+    for (pageaddr = 0, npages = 0;
+         pageaddr < wsize;
+         pageaddr += m->page_size) {
+      /* check whether this page must be written to */
+      for (i = pageaddr;
+           i < pageaddr + m->page_size;
+           i++)
+        if ((m->tags[i] & TAG_ALLOCATED) != 0) {
+          npages++;
+          break;
+        }
+    }
+
+    for (pageaddr = 0, failure = 0, nwritten = 0;
          !failure && pageaddr < wsize;
          pageaddr += m->page_size) {
       /* check whether this page must be written to */
@@ -927,7 +962,8 @@ int avr_write(PROGRAMMER * pgm, AVRPART * p, char * memtype, int size,
                 "%s: avr_write(): skipping page %u: no interesting data\n",
                 progname, pageaddr / m->page_size);
       }
-      report_progress(pageaddr, m->size, NULL);
+      nwritten++;
+      report_progress(nwritten, npages, NULL);
     }
     if (!failure)
       return wsize;
