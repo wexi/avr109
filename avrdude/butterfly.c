@@ -221,7 +221,7 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 {
   char id[8];
   char sw[2];
-  char hw[2];
+  char oem[40]; int len;
   char buf[10];
   char type;
   char c, devtype_1st;
@@ -284,30 +284,31 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
       } while (c == '?');
     }
 
-  /* Get the HW and SW versions to see if the programmer is present. */
+  /* Get the SW versions to see if the programmer is present. */
   butterfly_drain(pgm, 0);
 
   butterfly_send(pgm, "V", 1);
   butterfly_recv(pgm, sw, sizeof(sw));
 
-  butterfly_send(pgm, "v", 1);
-  butterfly_recv(pgm, hw, 1);	/* first, read only _one_ byte */
-  if (hw[0]!='?') {
-    butterfly_recv(pgm, &hw[1], 1);/* now, read second byte */
-  };
-
+  butterfly_send(pgm, "Z", 1);
+  butterfly_recv(pgm, oem, 1);
+  len = 1;
+  if (oem[0] !='?') {
+    for (; len < sizeof(oem)-1; len++) {
+      butterfly_recv(pgm, oem+len, 1);
+      if (oem[len] == '\r')
+	break;
+    }
+  }
+  oem[len] = '\0';
+    
   /* Get the programmer type (serial or parallel). Expect serial. */
 
   butterfly_send(pgm, "p", 1);
   butterfly_recv(pgm, &type, 1);
 
-  fprintf(stderr, "Found programmer: Id = \"%s\"; type = %c\n", id, type);
-  fprintf(stderr, "    Software Version = %c.%c; ", sw[0], sw[1]);
-  if (hw[0]=='?') {
-    fprintf(stderr, "No Hardware Version given.\n");
-  } else {
-    fprintf(stderr, "Hardware Version = %c.%c\n", hw[0], hw[1]);
-  };
+  fprintf(stderr, "Programmer ID: %s Version: %c.%c Type: %c\n", id, sw[0], sw[1], type);
+  fprintf(stderr, "OEM: %s\n", oem);
 
   /* See if programmer supports autoincrement of address. */
 
