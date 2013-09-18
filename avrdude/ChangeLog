@@ -1,3 +1,44 @@
+2013-09-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	bug #40055: AVRDUDE segfaults when writing eeprom
+	* main.c: Always clear the UF_AUTO_ERASE flag if either a
+	non-Xmega device was found, or the programmer does not offer a
+	page_erase method.
+
+2013-09-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* configure.ac (AC_INIT): Bump version to post-6.0.
+
+2013-09-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* configure.ac (AC_INIT): Bump version to 6.0.
+
+2013-09-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* jtag3.c (jtag3_initialize): Fix a buffer overflow by limiting
+	the flash page cache size to at most "readsize".  For Xmegas with
+	a page size of 512 bytes, the maximum USB packet size was
+	overflowed, and subsequently, a memmove copied beyond the end of
+	the allocated buffer.
+	* jtag3.c (jtag3_read_byte): Add the correct offset also for the
+	various flash regions, so reading the apptable or boot regions
+	yields the correct data.
+
+2013-09-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	Submitted by Joakim Lubeck:
+	bug #40040: Support for ATtiny20 and ATtiny40
+	* avrdude.conf.in: Restructure the reduced-core tiny devices
+	to use a common entry .reduced_core_tiny; add ATtiny20 and
+	ATtiny40
+
+2013-09-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	Submitted by Joakim Lubeck:
+	bug #40033: Support for the XMegaE5 family
+	* avrdude.conf.in (ATxmega8E5, ATxmega16E5, ATxmega32E5): New
+	entries.
+
 2013-09-13  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
 	* stk500v2.c (stk500v2_set_sck_period): Revamp this to match the
