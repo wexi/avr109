@@ -1,0 +1,2 @@
+I can confirm that using MXE too <http://mxe.cc/> avrdude builds after
+correcting Makefile's wrong "AR = :" with "AR = i686-pc-mingw32-ar".
