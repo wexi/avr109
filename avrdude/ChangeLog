@@ -1,3 +1,16 @@
+2013-12-15  Nils Springob <nils@nicai-systems.de>
+
+	* pgm.c/pgm.h: fixed syntax error in const pointer to const
+
+2013-12-05  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* configure.ac: bump version to 6.1-svn-20131205
+
+2013-12-05  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	bug #40817: Elf file support (possibly) not working on 6.0.1 windows build
+	* fileio.c (fileio): open file in binary mode also for FMT_ELF
+
 2013-12-04  Rene Liebscher <R.Liebscher@gmx.de>
 
 	Rework of bitbanging functions setpin, getpin, highpulsepin to make simplier use
@@ -14,7 +27,7 @@
 
 2013-10-18  Nils Springob <nils@nicai-systems.de>
 
-        * avrdude.conf.in (atmega1284): ATmega1284 variant added (same as ATmega1284p but with different signature)
+	* avrdude.conf.in (atmega1284): ATmega1284 variant added (same as ATmega1284p but with different signature)
 
 2013-09-25  Hannes Weisbach <hannes_weisbach@gmx.net>
 
