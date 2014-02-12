@@ -14,12 +14,17 @@ Current:
     - ...
 
   * New programmers supported:
-    - ...
+    - Atmel DFU, using FLIP protocol version 1 (AT90USB and ATmega*U* devices),
+      or version 2 (Xmega devices)
 
   * Bugfixes
     - bug #40055: AVRDUDE segfaults when writing eeprom
     - bug #40085: Typo fix in fuses report (for 6.1-svn-20130917)
     - bug #40817: Elf file support (possibly) not working on 6.0.1 windows build
+    - bug #40897: AT Mega2560 not correctly programmed with stk500(v1) ISP (solution patch)
+    - bug #41357: OS X: Avrdude messes with the usb stack?
+    - bug #41402: dfu.c missing include <stdint.h>
+    - patch #7896: DFU FLIPv2 programming support
     - patch #XXXX: xxx
 
   * Internals:

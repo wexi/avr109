@@ -82,7 +82,7 @@ AC_CHECK_LIB([ncurses], [tputs])
 AC_CHECK_LIB([readline], [readline])
 AH_TEMPLATE([HAVE_LIBELF],
             [Define if ELF support is enabled via libelf])
-AC_CHECK_LIB([elf], [elf_begin], [have_libelf=yes])
+AC_CHECK_LIB([elf], [elf_getshdrstrndx], [have_libelf=yes])
 if test x$have_libelf = xyes; then
    case $target in
        *)
@@ -215,11 +215,10 @@ LIBS="${LIBS} ${LIBHID}"
 
 AH_TEMPLATE([HAVE_LIBHID],
             [Define if HID support is enabled via the Win32 DDK])
-AC_TRY_RUN([#include <windows.h>
+AC_TRY_LINK([#include <windows.h>
 #include <setupapi.h>
-$HIDINCLUDE
-
-int
+$HIDINCLUDE],
+[int
 main(void)
 {
     GUID hidGuid;
@@ -227,7 +226,7 @@ main(void)
 
     return 0;
 }
-], [have_libhid=yes], [have_libhid=no], [have_libhid=no])
+], [have_libhid=yes], [have_libhid=no])
 AC_MSG_RESULT([$have_libhid])
 if test x$have_libhid = xyes; then
    AC_DEFINE([HAVE_LIBHID])

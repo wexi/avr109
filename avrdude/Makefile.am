@@ -32,6 +32,7 @@ EXTRA_DIST   = \
 	ChangeLog-2010 \
 	ChangeLog-2011 \
 	ChangeLog-2012 \
+	ChangeLog-2013 \
 	avrdude.1 \
 	avrdude.spec \
 	bootstrap
@@ -113,8 +114,14 @@ libavrdude_a_SOURCES = \
 	confwin.h \
 	crc16.c \
 	crc16.h \
+	dfu.c \
+	dfu.h \
 	fileio.c \
 	fileio.h \
+	flip1.c \
+	flip1.h \
+	flip2.c \
+	flip2.h \
 	freebsd_ppi.h \
 	ft245r.c \
 	ft245r.h \
