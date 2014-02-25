@@ -61,7 +61,7 @@ static int usb_interface;
  * The "baud" parameter is meaningless for USB devices, so we reuse it
  * to pass the desired USB device ID.
  */
-static int usbdev_open(char * port, long baud, union filedescriptor *fd)
+static int usbdev_open(char * port, union pinfo pinfo, union filedescriptor *fd)
 {
   char string[256];
   char product[256];
@@ -115,8 +115,8 @@ static int usbdev_open(char * port, long baud, union filedescriptor *fd)
     {
       for (dev = bus->devices; dev; dev = dev->next)
 	{
-	  if (dev->descriptor.idVendor == USB_VENDOR_ATMEL &&
-	      dev->descriptor.idProduct == (unsigned short)baud)
+	  if (dev->descriptor.idVendor == pinfo.usbinfo.vid &&
+	      dev->descriptor.idProduct == pinfo.usbinfo.pid)
 	    {
 	      udev = usb_open(dev);
 	      if (udev)
@@ -460,7 +460,7 @@ static int usbdev_recv_frame(union filedescriptor *fd, unsigned char *buf, size_
       n += rv;
       nbytes -= rv;
     }
-  while (rv == fd->usb.max_xfer);
+  while (nbytes > 0 && rv == fd->usb.max_xfer);
 
   if (nbytes < 0)
     return -1;
