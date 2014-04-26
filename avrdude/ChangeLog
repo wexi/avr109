@@ -1,3 +1,37 @@
+2014-04-14  Rene Liebscher <R.Liebscher@gmx.de>
+
+	bug #42056: double free or corruption triggered at exit
+	* pgm.c: copy usbpid list in pgm_dup
+
+2014-04-05  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* avrdude.1: Remove the note that users might edit the system-wide
+	config file.  This file will be overwritten by the next
+	installation, so it's not a good idea to manually modify it.
+	Using the -C +file option is a much better way for user
+	modifications.
+	* doc/avrdude.texi: (Dito.)
+	* avrdude.conf.in: Add a warning to not modify the file manually.
+
+2014-03-13  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* configure.ac (AC_INIT): Bump version for post-6.1.
+
+2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* configure.ac (AC_INIT): Bump version to 6.1.
+
+2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	* pgm.c (pgm_free): Cleanup police: destroy the p->usbpid
+	list when freeing the programmer struct.
+
+2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+
+	bug #40782: Verify errors for object size > 16 k on x32e5 due
+	to typo in avrdude.conf
+	* avrdude.conf.in (ATmega8E5, ATmega32E5): fix boot location
+
 2014-02-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
 	* avrdude.conf.in (atmelice, atmelice_pdi, atmelice_dw, atmelice_isp):
