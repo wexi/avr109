@@ -55,6 +55,7 @@
  */
 struct pdata
 {
+  char sw[2];
   char has_auto_incr_addr;
   unsigned int buffersize;
   unsigned int addr;
@@ -220,7 +221,6 @@ static void butterfly_powerdown(PROGRAMMER * pgm)
 static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 {
   char id[8];
-  char sw[2];
   char oem[40]; int len;
   char buf[10];
   char type;
@@ -288,7 +288,7 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
   butterfly_drain(pgm, 0);
 
   butterfly_send(pgm, "V", 1);
-  butterfly_recv(pgm, sw, sizeof(sw));
+  butterfly_recv(pgm, PDATA(pgm)->sw, 2);
 
   butterfly_send(pgm, "Z", 1);
   butterfly_recv(pgm, oem, 1);
@@ -307,7 +307,8 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
   butterfly_send(pgm, "p", 1);
   butterfly_recv(pgm, &type, 1);
 
-  fprintf(stderr, "Programmer ID: %s Version: %c.%c Type: %c\n", id, sw[0], sw[1], type);
+  fprintf(stderr, "Programmer ID: %s Version: %c.%c Type: %c\n", 
+	  id, PDATA(pgm)->sw[0], PDATA(pgm)->sw[1], type);
   fprintf(stderr, "OEM: %s\n", oem);
 
   /* See if programmer supports autoincrement of address. */
@@ -661,7 +662,7 @@ static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
                                 unsigned int page_size,
                                 unsigned int addr, unsigned int n_bytes)
 {
-  char cmd[4];
+  char cmd[4], erased = '0';
   int flash, eeprom;
   int use_ext_addr = m->op[AVR_OP_LOAD_EXT_ADDR] != NULL;
   unsigned int blocksize = PDATA(pgm)->buffersize;
@@ -671,7 +672,7 @@ static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
   if (!flash && !eeprom)
     return -2;
 
-  cmd[0] = 'g';
+  cmd[0] = PDATA(pgm)->sw[0] == '0' && PDATA(pgm)->sw[1] == '1' ? 'g' : 'G';
   cmd[3] = toupper((int)(m->desc[0]));
 
   while (n_bytes) {
@@ -690,7 +691,12 @@ static int butterfly_paged_load(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m,
     cmd[2] = blocksize & 0xff;
 
     butterfly_send(pgm, cmd, 4);
-    butterfly_recv(pgm, (char *)&m->buf[addr], blocksize);
+    if (cmd[0] == 'G')
+      butterfly_recv(pgm, &erased, 1);
+    if (erased == '0')
+      butterfly_recv(pgm, (char *)&m->buf[addr], blocksize);
+    else
+      memset((char *)&m->buf[addr], '\xFF', blocksize);
 
     addr += blocksize;
     n_bytes -= blocksize;
