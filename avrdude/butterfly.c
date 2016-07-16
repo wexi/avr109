@@ -221,7 +221,7 @@ static void butterfly_powerdown(PROGRAMMER * pgm)
 static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 {
   char id[8];
-  char oem[40]; int len;
+  char oem[41];			/* 40 chars max + \n */
   char buf[10];
   char type;
   char c, devtype_1st;
