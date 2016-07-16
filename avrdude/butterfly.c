@@ -290,17 +290,20 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
   butterfly_send(pgm, "V", 1);
   butterfly_recv(pgm, PDATA(pgm)->sw, 2);
 
-  butterfly_send(pgm, "Z", 1);
-  butterfly_recv(pgm, oem, 1);
-  len = 1;
-  if (oem[0] !='?') {
-    for (; len < sizeof(oem)-1; len++) {
-      butterfly_recv(pgm, oem+len, 1);
-      if (oem[len] == '\r')
-	break;
+  /* Get the OEM string, if any */
+  {
+    char *p = oem;
+    butterfly_send(pgm, "Z", 1);
+    butterfly_recv(pgm, p, 1);
+    if (*p != '?') {
+      while (*p != '\n') {
+	if (isprint(*p) && p - oem < sizeof(oem)-1)
+	  p++;
+	butterfly_recv(pgm, p, 1);
+      }
     }
+    *p = '\0';
   }
-  oem[len] = '\0';
     
   /* Get the programmer type (serial or parallel). Expect serial. */
 
@@ -309,7 +312,8 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 
   fprintf(stderr, "Programmer ID: %s Version: %c.%c Type: %c\n", 
 	  id, PDATA(pgm)->sw[0], PDATA(pgm)->sw[1], type);
-  fprintf(stderr, "OEM: %s\n", oem);
+  if (*oem)
+    fprintf(stderr, "OEM String = \"%s\"\n", oem);
 
   /* See if programmer supports autoincrement of address. */
 
