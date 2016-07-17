@@ -1,235 +1,90 @@
-2014-05-07  Rene Liebscher <R.Liebscher@gmx.de>
+2016-05-10  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	bug #42310: New part description for AT90PWM216
-	* avrdude.conf.in: added pwm216 entry
+	Submitted by Hannes Jochriem:
+	* avrdude.conf.in (ehajo-isp): New programmer.
 
-2014-05-07  Rene Liebscher <R.Liebscher@gmx.de>
+2016-04-20  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	bug #42158: Linux GPIO - Source Typo
-	* pindefs.h: fixed typo
+	* configure.ac (libftdi1): Rather than hardcoding the library
+	providing the libusb-1.0 API, use the result from the previous
+	probe.  This helps detecting libftdi1 on FreeBSD where the
+	libusb-1.0 API is provided by the system's libusb.
 
-2014-04-14  Rene Liebscher <R.Liebscher@gmx.de>
+2016-04-18  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	bug #42056: double free or corruption triggered at exit
-	* pgm.c: copy usbpid list in pgm_dup
+	* usb_hidapi.c (usbhid_open): Correctly calculate the
+	offset for serial number matching
 
-2014-04-05  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-03-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* avrdude.1: Remove the note that users might edit the system-wide
-	config file.  This file will be overwritten by the next
-	installation, so it's not a good idea to manually modify it.
-	Using the -C +file option is a much better way for user
-	modifications.
-	* doc/avrdude.texi: (Dito.)
-	* avrdude.conf.in: Add a warning to not modify the file manually.
+	bug #47550: Linux GPIO broken
+	* linuxgpio.c: Replace %ud by %u in snprintf calls.
 
-2014-03-13  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-03-02  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* configure.ac (AC_INIT): Bump version for post-6.1.
+	* usb_hidapi.c (usbhid_recv): Bump read timeout to 300 ms.
 
-2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-20  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* configure.ac (AC_INIT): Bump version to 6.1.
+	* jtag3.c: add support for libhidapi as (optional) transport for
+	CMSIS-DAP compliant debuggers (JTAGICE3 with firmware 3+,
+	AtmelICE, EDBG, mEDBG)
+	* usb_hidapi.c: (New file)
+	* libavrdude.h: Mention usbhid_serdev
+	* configure.ac: Bump version date
 
-2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-18  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* pgm.c (pgm_free): Cleanup police: destroy the p->usbpid
-	list when freeing the programmer struct.
+	(Obtained from patch #8717: pattch for mcprog and libhidapi support)
+	* configure.ac: Probe for libhidapi
+	* Makefile.am: Add @LIBHIDAPI@
 
-2014-03-12  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	bug #40782: Verify errors for object size > 16 k on x32e5 due
-	to typo in avrdude.conf
-	* avrdude.conf.in (ATmega8E5, ATmega32E5): fix boot location
+	* doc/avrdude.texi: Bump copyright year.
 
-2014-02-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* avrdude.conf.in (atmelice, atmelice_pdi, atmelice_dw, atmelice_isp):
-	New entries.
-	* avrdude.1: Document the Atmel-ICE addition.
-	* doc/avrdude.texi: (Dito.)
-	* usbdevs.c (USB_DEVICE_ATMEL_ICE): New entry.
+	* configure.ac: Bump for post-release 6.3.
 
-2014-02-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* main.c: Bump copyright year.
+	* configure.ac: Released version 6.3.
 
-2014-02-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* jtag3.c (jtag3_recv): avoid memmov'ing more data than available
+	patch #8894: Spelling in 6.2 doc
+	* doc/avrdude.texi: Various spelling fixes.
 
-2014-02-27  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* avrdude.1: Documentation update for EDBG.
-	* doc/avrdude.texi: (Dito.)
+	patch #8895: Spelling in 6.2 code
+	* avrftdi.c (avrftdi_open): Spell fix.
 
-2014-02-27  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* jtag3.c: For EDBG protocol, always use 512-byte block I/O.  The
-	lower layers will split this according to the EP's maxsize.  This
-	makes it work over USB 1.1 connections (albeit very slowly, due to
-	the interrupt transfers used).
+	patch #8896: Silence cppcheck warnings in 6.2 code
+	* linuxgpio.c: Use %ud to print GPIO values.
 
-2014-02-27  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* config_gram.y: Turn the usbpid parameter of the programmer into
-	a list of PIDs.  Make the JTAGICE3 programmer handle a list of
-	PIDs, by trying each of them in sequence.  Use a single, central
-	jtag3_open_common() function to handle the common code of all
-	jtag3_open_* functions.  Centralize all USB VID/PID definitions in
-	usbdevs.h.
-	* flip1.c: (Dito.)
-	* ft245r.c: (Dito.)
-	* stk500v2.c: (Dito.)
-	* jtag3.c: (Dito.)
-	* jtag3.h: (Dito.)
-	* flip2.c: (Dito.)
-	* usbdevs.h: (Dito.)
-	* pgm.c: (Dito.)
-	* serial.h: (Dito.)
-	* pgm.h: (Dito.)
-	* usbtiny.c: (Dito.)
-	* usbasp.c: (Dito.)
-	* avrftdi.c: (Dito.)
-	* usbtiny.h: (Dito.)
-	* avrdude.conf.in: (Dito.)
-	* usbasp.h: (Dito.)
-	* usb_libusb.c: (Dito.)
+	patch #8735: ATtiny28 support in avrdude.conf
+	* avrdude.conf.in (ATtiny28): New device.
 
-2014-02-27  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* usb_libusb.c (usbdev_open): Replace all calls to exit(1) by
-	return -1
+	* avrdude.conf.in (ATmega48PB, ATmega88PB, ATmega168PB): New
+	devices.
 
-2014-02-26  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
+2016-02-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* jtag3_private.h: Add EDBG/CMSIS-DAP specific constants.
-	* jtag3.c: Add EDBG/CMSIS-DAP protocol implementation.
-	* serial.h: (Dito.)
-	* usbdevs.h: (Dito.)
-	* usb_libusb.c: (Dito.)
-	* configure.ac: (Dito.)
-	* avrdude.conf.in: Add JTAGICE3 and XplainedPro entries using
-	EDBG.
-	* configure.ac: Bump version date.
-
-2014-02-22  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* usb_libusb.c (usbdev_recv_frame): Fix a bug where a new recv
-	request was issued even though all desired data had aldready
-	been received.
-
-2014-02-21  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* serial.h: Change the second parameter of the ser_open method
-	from "baud" into a "union pinfo", so the USB parameters can be
-	passed without hacks.
-	* arduino.c: (Dito.)
-	* avr910.c: (Dito.)
-	* buspirate.c: (Dito.)
-	* butterfly.c: (Dito.)
-	* jtag3.c: (Dito.)
-	* jtagmkI.c: (Dito.)
-	* jtagmkII.c: (Dito.)
-	* ser_avrdoper.c: (Dito.)
-	* ser_posix.c: (Dito.)
-	* ser_win32.c: (Dito.)
-	* stk500.c: (Dito.)
-	* stk500v2.c: (Dito.)
-	* usb_libusb.c: (Dito.)
-	* wiring.c: (Dito.)
-
-2014-01-30  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	[bug #41402] dfu.c missing include <stdint.h>
-	* dfu.c: include <stdint.h> where uint16_t is defined
-
-2014-01-28  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* avrdude.conf.in (ATmega256RFR2 et al.): Fix EEPROM size.
-
-2014-01-27  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	[bug #41357] OS X: Avrdude messes with the usb stack?
-	* usb_libusb.c (usbdev_close): Only issue the usb_reset() for
-	Linux systems, as these are the only ones that seem to require
-	it under some circumstances.
-
-2014-01-22  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* configure.ac (libelf): check against elf_getshdrstrndx() rather
-	than just elf_begin() only, so it is clear we found a sufficiently
-	recent libelf to work with.
-
-2014-01-22  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	Contributed by Alan Horstmann:
-	bug #40897: AT Mega2560 not correctly programmed with stk500(v1) ISP (solution patch)
-	* stk500.c: Implement extended address byte handling.
-	* avrdude.conf.in (ATmega2560): enable stk500_devcode so
-	STK500v1 protocol actually starts at all.
-
-2014-01-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* flip1.c: Implement the meat of FLIP version 1 protocol.
-	* avrdude.1: Document the new protocol.
+	patch #8435: Implementing mEDBG CMSIS-DAP protocol
+	* usb_libusb.c: Add endpoint IDs for Xplained Mini, correctly
+	transfer trailing ZLP when needed
+	* avrdude.conf.in (xplainedmini, xplainedmini_dw): New entries.
+	* jtag3.c (jtag3_edbg_send, jtag3_edbg_recv_frame): Implement
+	fragmentation needed for the 64-byte EP size of the Xplained Mini
+	* avrdude.1: Document the change
 	* doc/avrdude.texi: (Dito.)
 
-2014-01-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
 
-	* flip2.c (flip2_page_erase): Remove unimplemented function.
-	* dfu.h: Correctly conditionalize <usb.h> vs. <lusb0_usb.h>;
-	add adjustable timeout (struct dfu_dev); add dfu_abort()
-	* dfu.c (dfu_abort): New function; implement adjustable timeout.
-
-2014-01-17  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* configure.ac (libhid): Turn from AC_TRY_RUN into
-	AC_TRY_COMPILE, so it also works for cross-compilation
-	setups.
-
-2014-01-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* dfu.c (dfu_init): Move the descriptor checks up into the
-	FLIP protocol implementation.
-	* flip2.c (flip2_initialize): (Dito.)
-	* flip1.c (flip1_initialize): (Dito.)
-
-2014-01-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* flip2.c: Rename from flip.c
-	* flip2.h: Rename from flip.h
-	* Makefile.am: Reflect the renaming.
-	* dfu.c: Update information how to get GPL.
-	* dfu.h: (Dito.)
-
-2014-01-16  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* flip.c (flip2_initialize): Check user is running on an Xmega
-	device.
-
-2014-01-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* flip.c: Added some verbose-level messages (-vv)
-	* dfu.c: Added some verbose-level messages (-vvvv)
-
-2014-01-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	Submitted by Kirill Levchenko:
-	patch #7896: DFU FLIPv2 programming support
-	* pgm_type.c: Add the flip2 programmer type.
-	* config_gram.y: Allow for the usbid keyword in a device definition.
-	* avrdude.conf.in: Add usbpid values to those Xmega devices where
-	applicable.
-	* avrpart.h: Add usbpid device field.
-	* dfu.c: (New file.)
-	* dfu.h: (New file.)
-	* flip.c: (New file.)
-	* flip.h: (New file.)
-	* Makefile.am: Add new files.
-	* doc/avrdude.texi: Document the changes.
-	* avrdude.1: (Dito.)
-
-2014-01-15  Joerg Wunsch <j.gnu@uriah.heep.sax.de>
-
-	* ChangeLog-2013: Annual changelog rotation.

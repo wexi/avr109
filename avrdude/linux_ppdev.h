@@ -33,17 +33,16 @@
 
 #define ppi_claim(fd)                                        \
   if (ioctl(fd, PPCLAIM)) {                                  \
-    fprintf(stderr, "%s: can't claim device \"%s\": %s\n\n", \
+    avrdude_message(MSG_INFO, "%s: can't claim device \"%s\": %s\n\n", \
             progname, port, strerror(errno));                \
     close(fd);                                               \
-    exit(1);                                                 \
+    return;                                                  \
   }
 
 #define ppi_release(fd)                                      \
   if (ioctl(fd, PPRELEASE)) {                                \
-    fprintf(stderr, "%s: can't release device: %s\n\n",      \
+    avrdude_message(MSG_INFO, "%s: can't release device: %s\n\n", \
             progname, strerror(errno));                      \
-    exit(1);                                                 \
   }
 
 #define DO_PPI_READ(fd, reg, valp) \
