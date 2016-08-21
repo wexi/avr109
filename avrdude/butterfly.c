@@ -304,8 +304,8 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
     butterfly_send(pgm, "Z", 1);
     butterfly_recv(pgm, p, 1);
     if (*p != '?') {
-      while (*p != '\n') {
-	if (isprint(*p) && p - oem < sizeof(oem)-1)
+      while (isprint(*p)) {
+	if (p - oem < sizeof(oem)-1)
 	  p++;
 	butterfly_recv(pgm, p, 1);
       }
