@@ -205,23 +205,31 @@ static int butterfly_program_enable(PROGRAMMER * pgm, AVRPART * p)
  */
 static void butterfly_powerup(PROGRAMMER * pgm)
 {
-  /* Do nothing. */
-
+  serial_set_dtr_rts(&pgm->fd, 1);
+  avrdude_message(MSG_INFO, "DTR/RTS raised\n");
   return;
 }
-
 
 /*
  * remove power from the AVR processor
  */
 static void butterfly_powerdown(PROGRAMMER * pgm)
 {
-  /* Do nothing. */
-
+  serial_set_dtr_rts(&pgm->fd, 0);
+  avrdude_message(MSG_INFO, "DTR/RTS dropped\n");
   return;
 }
 
-#define IS_BUTTERFLY_MK 0x0001
+static int butterfly_disable(PROGRAMMER * pgm)
+{
+  return butterfly_leave_prog_mode(pgm);
+}
+
+
+static int butterfly_enable(PROGRAMMER * pgm)
+{
+  return butterfly_enter_prog_mode(pgm);
+}
 
 /*
  * initialize the AVR device and prepare it to accept commands
@@ -229,89 +237,32 @@ static void butterfly_powerdown(PROGRAMMER * pgm)
 static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
 {
   char id[8];
-  char oem[41];			/* 40 chars max + \n */
+  char oem[41], *poem = oem;	/* 40 chars max + \n */
   char buf[10];
   char type;
   char c, devtype_1st;
 
-  /*
-   * Send some ESC to activate butterfly bootloader.  This is not needed
-   * for plain avr109 bootloaders but does not harm there either.
-   */
-  avrdude_message(MSG_INFO, "Connecting to programmer: ");
-  if (pgm->flag & IS_BUTTERFLY_MK)
-    {
-      char mk_reset_cmd[6] = {"#aR@S\r"};
-      unsigned char mk_timeout = 0;
+  butterfly_powerup(pgm);
+  butterfly_drain(pgm, 0);
+  
+  /* Get the OEM string, if any */
 
-      putc('.', stderr);
-      butterfly_send(pgm, mk_reset_cmd, sizeof(mk_reset_cmd));
-      usleep(20000); 
-
-      do
-	{
-	  c = 27; 
-	  butterfly_send(pgm, &c, 1);
-	  usleep(20000);
-	  c = 0xaa;
-	  usleep(80000);
-	  butterfly_send(pgm, &c, 1);
-	  if (mk_timeout % 10 == 0) putc('.', stderr);
-	} while (mk_timeout++ < 10);
-
-      butterfly_recv(pgm, &c, 1);
-      if ( c != 'M' && c != '?')
-        {
-          avrdude_message(MSG_INFO, "\nConnection FAILED.");
-          return -1;
-        }
-      else
-        {
-	  id[0] = 'M'; id[1] = 'K'; id[2] = '2'; id[3] = 0;
-	}
-    }
-  else
-    {
-      do {
-	putc('.', stderr);
-	butterfly_send(pgm, "\033", 1);
-	butterfly_drain(pgm, 0);
-	butterfly_send(pgm, "S", 1);
-	butterfly_recv(pgm, &c, 1);
-	if (c != '?') {
-	    putc('\n', stderr);
-	    /*
-	     * Got a useful response, continue getting the programmer
-	     * identifier. Programmer returns exactly 7 chars _without_
-	     * the null.
-	     */
-	  id[0] = c;
-	  butterfly_recv(pgm, &id[1], sizeof(id)-2);
-	  id[sizeof(id)-1] = '\0';
-	}
-      } while (c == '?');
-    }
+  butterfly_send(pgm, "Z", 1);
+  if (serial_recv(&pgm->fd, poem, 1) < 0)
+    return -1;
+  if (*poem != '?') {
+    while (*poem != '\r') {
+      if (poem - oem < sizeof(oem)-1)
+	poem++;
+      butterfly_recv(pgm, poem, 1);
+    } 
+  }
+  *poem = '\0';
 
   /* Get the SW versions to see if the programmer is present. */
-  butterfly_drain(pgm, 0);
 
   butterfly_send(pgm, "V", 1);
   butterfly_recv(pgm, PDATA(pgm)->sw, 2);
-
-  /* Get the OEM string, if any */
-  {
-    char *p = oem;
-    butterfly_send(pgm, "Z", 1);
-    butterfly_recv(pgm, p, 1);
-    if (*p != '?') {
-      while (*p != '\r') {
-	if (p - oem < sizeof(oem)-1)
-	  p++;
-	butterfly_recv(pgm, p, 1);
-      } 
-    }
-    *p = '\0';
-  }
     
   /* Get the programmer type (serial or parallel). Expect serial. */
 
@@ -383,23 +334,7 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
                     progname, (unsigned)buf[1]);
 
   butterfly_drain(pgm, 0);
-
-  return 0;
-}
-
-
-
-static void butterfly_disable(PROGRAMMER * pgm)
-{
-  butterfly_leave_prog_mode(pgm);
-  return;
-}
-
-
-static void butterfly_enable(PROGRAMMER * pgm)
-{
-  butterfly_enter_prog_mode(pgm);
-  return;
+  return butterfly_enter_prog_mode(pgm);
 }
 
 
@@ -417,7 +352,6 @@ static int butterfly_open(PROGRAMMER * pgm, char * port)
   if (serial_open(port, pinfo, &pgm->fd)==-1) {
     return -1;
   }
-
   /*
    * drain any extraneous input
    */
@@ -785,6 +719,9 @@ void butterfly_initpgm(PROGRAMMER * pgm)
 }
 
 const char butterfly_mk_desc[] = "Mikrokopter.de Butterfly";
+
+
+#define IS_BUTTERFLY_MK 0x0001
 
 void butterfly_mk_initpgm(PROGRAMMER * pgm)
 {

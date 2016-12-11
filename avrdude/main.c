@@ -994,19 +994,6 @@ int main(int argc, char * argv [])
   exitrc = 0;
 
   /*
-   * enable the programmer
-   */
-  pgm->enable(pgm);
-
-  /*
-   * turn off all the status leds
-   */
-  pgm->rdy_led(pgm, OFF);
-  pgm->err_led(pgm, OFF);
-  pgm->pgm_led(pgm, OFF);
-  pgm->vfy_led(pgm, OFF);
-
-  /*
    * initialize the chip in preperation for accepting commands
    */
   init_ok = (rc = pgm->initialize(pgm, p)) >= 0;
