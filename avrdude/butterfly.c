@@ -55,7 +55,7 @@
 struct pdata
 {
   char sw[2];
-  char has_auto_incr_addr;
+  int has_auto_incr_addr;
   unsigned int buffersize;
   unsigned int addr;
 };
@@ -304,11 +304,11 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
     butterfly_send(pgm, "Z", 1);
     butterfly_recv(pgm, p, 1);
     if (*p != '?') {
-      while (isprint(*p)) {
+      while (*p != '\r') {
 	if (p - oem < sizeof(oem)-1)
 	  p++;
 	butterfly_recv(pgm, p, 1);
-      }
+      } 
     }
     *p = '\0';
   }
@@ -326,9 +326,9 @@ static int butterfly_initialize(PROGRAMMER * pgm, AVRPART * p)
   /* See if programmer supports autoincrement of address. */
 
   butterfly_send(pgm, "a", 1);
-  butterfly_recv(pgm, &PDATA(pgm)->has_auto_incr_addr, 1);
-  if (PDATA(pgm)->has_auto_incr_addr == 'Y')
-      avrdude_message(MSG_INFO, "Programmer supports auto addr increment.\n");
+  butterfly_recv(pgm, &c, 1);
+  if ((PDATA(pgm)->has_auto_incr_addr = c == 'Y'))
+    avrdude_message(MSG_INFO, "Programmer supports auto addr increment.\n");
 
   /* Check support for buffered memory access, abort if not available */
 
@@ -477,7 +477,7 @@ static int butterfly_set_extaddr(PROGRAMMER * pgm, unsigned long addr)
 
 static int butterfly_redress(PROGRAMMER * pgm, unsigned int addr, unsigned int inc)
 {
-  int redress = (PDATA(pgm)->has_auto_incr_addr == 'Y') && (PDATA(pgm)->addr != addr);
+  int redress = PDATA(pgm)->has_auto_incr_addr && (PDATA(pgm)->addr != addr);
   PDATA(pgm)->addr = addr + inc;
   return redress;  
 }
